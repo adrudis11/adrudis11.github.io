@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-1771884902241881">
+    <title>JSON to CSV / Excel Converter - Fast & Secure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar styling for the table preview */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-md">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 12h16M4 16h16M4 18h16"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 tracking-tight">Convertify</h1>
+                    <p class="text-xs text-slate-500">JSON to CSV Converter</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span class="w-1.5 h-1.5 mr-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    100% Client-Side
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 transition-all duration-300" id="inputContainer">
+            <div class="flex items-center justify-between mb-3">
+                <label for="jsonInput" class="block text-sm font-semibold text-slate-700">Paste your Raw JSON here:</label>
+                <div class="flex space-x-2">
+                    <button onclick="loadSampleData()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition">Load Sample Data</button>
+                    <span class="text-slate-300">|</span>
+                    <button onclick="clearInput()" class="text-xs text-rose-600 hover:text-rose-800 font-medium transition">Clear</button>
+                </div>
+            </div>
+            
+            <div class="relative">
+                <textarea 
+                    id="jsonInput" 
+                    class="w-full h-64 p-4 font-mono text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 resize-y"
+                    placeholder='[\n  {"id": 1, "name": "John Doe", "email": "john@example.com", "role": "Admin"},\n  {"id": 2, "name": "Jane Smith", "email": "jane@example.com", "role": "User"}\n]'
+                ></textarea>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between min-h-[24px]">
+                <div id="statusMessage" class="text-sm font-medium transition-colors duration-200">
+                    </div>
+                <div id="recordCount" class="text-xs font-semibold text-slate-500">
+                    0 rows detected
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-sm text-slate-500 text-center sm:text-left">
+                Your data stays completely private. All processing is executed instantly on your device.
+            </div>
+            <button 
+                id="downloadBtn" 
+                onclick="downloadCSV()" 
+                disabled
+                class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-slate-300 cursor-not-allowed transition-all duration-200 transform active:scale-95"
+            >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Download CSV
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hidden" id="previewContainer">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Live Table Preview</h3>
+                <span class="text-xs text-slate-400">Showing up to 50 rows</span>
+            </div>
+            
+            <div class="overflow-x-auto max-h-96 border border-slate-200 rounded-xl custom-scrollbar shadow-inner">
+                <table class="min-w-full divide-y divide-slate-200 text-left text-sm" id="previewTable">
+                    </table>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl shadow-md p-6 text-white">
+            <h4 class="font-bold text-md mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                How to use
+            </h4>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-indigo-200 list-disc list-inside">
+                <li>Paste a standard JSON array of objects.</li>
+                <li>Nested JSON objects will automatically flatten inline.</li>
+                <li>Verify schema consistency in the live viewer above.</li>
+                <li>Click the download button to grab your optimized CSV format.</li>
+            </ul>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-auto py-6">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center text-xs text-slate-400">
+            &copy; 2026 Convertify App. All Rights Reserved. Clean. Fast. Client-side processing.
+        </div>
+    </footer>
+
+    <script>
+        const jsonInput = document.getElementById('jsonInput');
+        const inputContainer = document.getElementById('inputContainer');
+        const statusMessage = document.getElementById('statusMessage');
+        const recordCount = document.getElementById('recordCount');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewTable = document.getElementById('previewTable');
+
+        let parsedData = null;
+
+        // Listen for typing, pasting, and modifying inputs
+        jsonInput.addEventListener('input', processJSONProcessing);
+
+        function processJSONProcessing() {
+            const rawValue = jsonInput.value.trim();
+
+            if (!rawValue) {
+                resetToEmptyState();
+                return;
+            }
+
+            try {
+                let data = JSON.parse(rawValue);
+                
+                // standardizing logic: wrap single object arrays dynamically 
+                if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+                    data = [data];
+                }
+
+                if (!Array.isArray(data)) {
+                    throw new Error("JSON should evaluate to an Array of objects.");
+                }
+
+                if (data.length === 0) {
+                    throw new Error("The JSON array is currently empty.");
+                }
+
+                // Success State Execution
+                parsedData = data;
+                setErrorState(false);
+                updateStatus('Valid JSON Format', 'text-green-600');
+                recordCount.textContent = `${data.length} row(s) identified`;
+                
+                // Activate Action Triggers
+                enableDownloadButton(true);
+                renderTablePreview(data);
+
+            } catch (err) {
+                // Error State Execution
+                parsedData = null;
+                setErrorState(true);
+                updateStatus(`Parsing Error: ${err.message}`, 'text-rose-600');
+                recordCount.textContent = '0 rows detected';
+                enableDownloadButton(false);
+                previewContainer.classList.add('hidden');
+            }
+        }
+
+        function setErrorState(isError) {
+            if (isError) {
+                inputContainer.classList.remove('border-slate-200', 'focus-within:ring-indigo-500');
+                inputContainer.classList.add('border-rose-400', 'bg-rose-50/30', 'ring-2', 'ring-rose-500/20');
+                jsonInput.classList.remove('bg-slate-50', 'border-slate-200');
+                jsonInput.classList.add('bg-white', 'border-rose-300', 'focus:ring-rose-500');
+            } else {
+                inputContainer.add = 'border-slate-200'; // fix potential target string assignment logic safely
+                inputContainer.classList.add('border-slate-200');
+                inputContainer.classList.remove('border-rose-400', 'bg-rose-50/30', 'ring-2', 'ring-rose-500/20');
+                jsonInput.classList.add('bg-slate-50', 'border-slate-200');
+                jsonInput.classList.remove('bg-white', 'border-rose-300', 'focus:ring-rose-500');
+            }
+        }
+
+        function updateStatus(message, colorClass) {
+            statusMessage.className = `text-sm font-medium ${colorClass}`;
+            statusMessage.textContent = message;
+        }
+
+        function enableDownloadButton(enable) {
+            if (enable) {
+                downloadBtn.disabled = false;
+                downloadBtn.className = "w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 cursor-pointer transition-all duration-200 transform active:scale-95";
+            } else {
+                downloadBtn.disabled = true;
+                downloadBtn.className = "w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-slate-300 cursor-not-allowed transition-all duration-200";
+            }
+        }
+
+        function resetToEmptyState() {
+            parsedData = null;
+            setErrorState(false);
+            statusMessage.textContent = '';
+            recordCount.textContent = '0 rows detected';
+            enableDownloadButton(false);
+            previewContainer.classList.add('hidden');
+        }
+
+        function clearInput() {
+            jsonInput.value = '';
+            resetToEmptyState();
+            jsonInput.focus();
+        }
+
+        function loadSampleData() {
+            const sampleJson = [
+                { "ID": 101, "Product": "Wireless Mouse", "Category": "Electronics", "Price": 29.99, "InStock": true },
+                { "ID": 102, "Product": "Ergonomic Office Chair", "Category": "Furniture", "Price": 189.50, "InStock": false },
+                { "ID": 103, "Product": "Mechanical Keyboard", "Category": "Electronics", "Price": 89.00, "InStock": true },
+                { "ID": 104, "Product": "Stainless Water Bottle", "Category": "Fitness", "Price": 24.00, "InStock": true },
+                { "ID": 105, "Product": "Premium Notebook Grid", "Category": "Stationery", "Price": 12.95, "InStock": true }
+            ];
+            jsonInput.value = JSON.stringify(sampleJson, null, 2);
+            processJSONProcessing();
+        }
+
+        // Deep extract distinct object headers for consistent multi-schema fallback arrays
+        function extractHeaders(dataArray) {
+            const headerSet = new Set();
+            dataArray.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    Object.keys(item).forEach(key => headerSet.add(key));
+                }
+            });
+            return Array.from(headerSet);
+        }
+
+        function flattenValue(val) {
+            if (val === null || val === undefined) return '';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return String(val);
+        }
+
+        function renderTablePreview(data) {
+            const headers = extractHeaders(data);
+            if (headers.length === 0) {
+                previewContainer.classList.add('hidden');
+                return;
+            }
+
+            // Cap row preview count at 50 to maximize rendering speeds on massive blobs
+            const previewRows = data.slice(0, 50);
+
+            let tableHTML = `<thead class="bg-slate-100 sticky top-0 font-semibold text-slate-700 border-b border-slate-200"><tr>`;
+            headers.forEach(h => {
+                tableHTML += `<th scope="col" class="px-4 py-3 text-xs tracking-wider whitespace-nowrap">${h}</th>`;
+            });
+            tableHTML += `</tr></thead><tbody class="divide-y divide-slate-100 bg-white">`;
+
+            previewRows.forEach((row, index) => {
+                const zebraClass = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60';
+                tableHTML += `<tr class="${zebraClass} hover:bg-slate-100/70 transition-colors">`;
+                headers.forEach(h => {
+                    const cellVal = flattenValue(row[h]);
+                    tableHTML += `<td class="px-4 py-2.5 text-xs text-slate-600 truncate max-w-xs whitespace-nowrap" title="${cellVal.replace(/"/g, '&quot;')}">${cellVal}</td>`;
+                });
+                tableHTML += `</tr>`;
+            });
+
+            tableHTML += `</tbody>`;
+            previewTable.innerHTML = tableHTML;
+            previewContainer.classList.remove('hidden');
+        }
+
+        function downloadCSV() {
+            if (!parsedData || parsedData.length === 0) return;
+
+            const headers = extractHeaders(parsedData);
+            let csvLines = [];
+
+            // Escape string utilities to sanitize fields into standard safe CSV format rules
+            const formatCSVField = (str) => {
+                let text = flattenValue(str);
+                // If double quotes exist, escape them by duplication
+                if (text.includes('"')) {
+                    text = text.replace(/"/g, '""');
+                }
+                // Wrap fields containing commas, line breaks, or structural quotes inside bounding quotes
+                if (/[",\n\r]/.test(text)) {
+                    text = `"${text}"`;
+                }
+                return text;
+            };
+
+            // Build Headings String Matrix Row
+            csvLines.push(headers.map(formatCSVField).join(','));
+
+            // Build Row Values Matrix
+            parsedData.forEach(row => {
+                const line = headers.map(h => formatCSVField(row[h])).join(',');
+                csvLines.push(line);
+            });
+
+            const csvBufferString = csvLines.join('\r\n');
+            const blob = new Blob([csvBufferString], { type: 'text/csv;charset=utf-8;' });
+            
+            // Client DOM Link Downloader Anchor Creation Lifecycle
+            const systemLink = document.createElement('a');
+            const targetBlobUrl = URL.createObjectURL(blob);
+            
+            const clientTimestamp = new Date().toISOString().slice(0, 10);
+            systemLink.setAttribute('href', targetBlobUrl);
+            systemLink.setAttribute('download', `converted_data_${clientTimestamp}.csv`);
+            systemLink.style.visibility = 'hidden';
+            
+            document.body.appendChild(systemLink);
+            systemLink.click();
+            document.body.removeChild(systemLink);
+            URL.revokeObjectURL(targetBlobUrl);
+        }
+    </script>
+</body>
+</html>
